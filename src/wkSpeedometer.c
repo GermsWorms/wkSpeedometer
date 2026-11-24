@@ -7,8 +7,8 @@
  * How it works. WA's team tasks are seen through their message handler, and the worms through their physics step (both
  * hooks only look). Each frame (GameRender) the module notes which team has the turn, where its current worm is and how
  * fast it goes. Right after WA's own RenderDrawingQueue has returned for the game's display (so over the HUD), the line
- * and the speedometer are drawn one of two ways: through wkDirect3D (another module: the graphics card draws them over
- * the finished frame) when it is loaded and draws this frame, else into WA's 8-bit frame in the nearest colours of WA's
+ * and the speedometer are drawn one of two ways: by the graphics card over the finished frame (through wkMapZoom 6,
+ * or the older wkDirect3D) when that module is loaded and draws this frame, else into WA's 8-bit frame in the nearest colours of WA's
  * palette as shown. Where the map is on the screen comes from wkMapZoom when it is loaded and tells (its zoom), else
  * from WA's camera (100%).
  *
@@ -27,7 +27,7 @@
  * Test switches (environment variables, for isolated test copies of WA only): WKSPEEDO_TEST=1 one log line a second
  * (the turn's worm, its speed, which way the dial and the line were drawn); WKSPEEDO_TEST_LINE=1 the line shown all the
  * time for the turn's worm, as TurnLine=all with this turn's own points too (to see it in a replay); WKSPEEDO_NO_GPU=1
- * never through wkDirect3D.
+ * never through the graphics card.
  *
  * MinHook (third_party/minhook) is BSD licensed. */
 #define WIN32_LEAN_AND_MEAN
@@ -43,7 +43,7 @@
 #include "speedo.h"
 #include "overlay_draw.h"
 
-#define WKSPEEDO_VERSION "1.1 beta"
+#define WKSPEEDO_VERSION "1.2 beta"
 
 #define WA_BASE 0x400000u
 #define GAME_RENDER_VA 0x533dc0u
@@ -139,7 +139,7 @@ static d3d_overlay_fn gpu_overlay;
 static d3d_tris_fn gpu_tris;
 static mz_view_fn mz_view;
 
-/* what was drawn this frame, how (0 nothing, 1 wkDirect3D, 2 WA's frame), and where the view came from (for the test
+/* what was drawn this frame, how (0 nothing, 1 the graphics card, 2 WA's frame), and where the view came from (for the test
  * log) */
 static int dial_way, line_way, view_from;
 static long line_count;
@@ -542,13 +542,26 @@ static void pin_owner(const void *addr, const char *what) {
     if (ex(0x1 | 0x4, (LPCSTR)addr, &pinned)) say("%s: in %s, pinned too, so it stays loaded", what, name);
 }
 
-/* wkDirect3D (the graphics card draws the line and the dial) and wkMapZoom (where the map is on the screen when it is
- * zoomed): both optional, both looked up once */
+/* the graphics-card drawing (it draws the line and the dial) and wkMapZoom's view (where the map is on the screen when
+ * it is zoomed): both optional, both looked up once */
+/* the module that draws on the graphics card: wkMapZoom 6 and newer has that drawing in it; before, it was a module of
+ * its own, wkDirect3D (still used when it is loaded: then it is the one that draws) */
+static HMODULE gpu_module(const char **name) {
+    static const char *const names[2] = {"wkDirect3D.dll", "wkMapZoom.dll"};
+    int i;
+    for (i = 0; i < 2; i++) {
+        const HMODULE m = GetModuleHandleA(names[i]);
+        if (m && GetProcAddress(m, "wkDirect3D_Api") && GetProcAddress(m, "wkDirect3D_Overlay")) { if (name) *name = names[i]; return m; }
+    }
+    return NULL;
+}
+
 static void look_up_others(void) {
+    const char *gpu_name = "";
     HMODULE m;
     looked = 1;
-    if (no_gpu) say("WKSPEEDO_NO_GPU: wkDirect3D not used");
-    else if ((m = GetModuleHandleA("wkDirect3D.dll")) != NULL) {
+    if (no_gpu) say("WKSPEEDO_NO_GPU: the graphics card is not used");
+    else if ((m = gpu_module(&gpu_name)) != NULL) {
         const d3d_api_fn api = (d3d_api_fn)(void *)GetProcAddress(m, "wkDirect3D_Api");
         const d3d_overlay_fn ov = (d3d_overlay_fn)(void *)GetProcAddress(m, "wkDirect3D_Overlay");
         const d3d_tris_fn tr = (d3d_tris_fn)(void *)GetProcAddress(m, "wkDirect3D_Triangles");
@@ -556,11 +569,11 @@ static void look_up_others(void) {
         if (level >= 1) {
             gpu_overlay = ov;
             gpu_tris = tr;
-            pin_owner((const void *)api, "wkDirect3D's drawing functions");
+            pin_owner((const void *)api, "the graphics-card drawing's functions");
         }
-        say("wkDirect3D is loaded: api %d, overlay %s, triangles %s", level, gpu_overlay ? "used" : "not there",
+        say("%s draws on the graphics card: api %d, overlay %s, triangles %s", gpu_name, level, gpu_overlay ? "used" : "not there",
             gpu_tris ? "used" : "not there");
-    } else say("wkDirect3D is not loaded: everything is drawn into WA's frame");
+    } else say("no module that draws on the graphics card (wkMapZoom 6) is loaded: everything is drawn into WA's frame");
     if ((m = GetModuleHandleA("wkMapZoom.dll")) != NULL) {
         mz_view = (mz_view_fn)(void *)GetProcAddress(m, "wkMapZoom_View");
         if (mz_view) pin_owner((const void *)mz_view, "wkMapZoom's view");
@@ -592,7 +605,7 @@ static int wa_frame(uint8_t **px, int *stride, int *h) {
     return *px && *stride >= 64 && *h >= 64 && *stride <= 16384 && *h <= 16384;
 }
 
-/* the shown movement line: its segments on the screen, through wkDirect3D as triangles, else into WA's frame */
+/* the shown movement line: its segments on the screen, as triangles for the graphics card, else into WA's frame */
 #define MAX_VTX 190000
 static line_seg *segs;
 static int cap_segs;

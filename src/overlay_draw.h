@@ -1,7 +1,7 @@
 /* overlay_draw.h: wkSpeedometer's pure drawing code, with no game calls (native test: tests/draw_test.c).
  *
  * The movement line: its points (tpoint, in land pixels) turned into screen segments (line_segments), then drawn one of
- * two ways: as triangles for wkDirect3D (line_triangles: a quad a segment), or into WA's 8-bit frame as opaque pixels in
+ * two ways: as triangles for the graphics card (line_triangles: a quad a segment), or into WA's 8-bit frame as opaque pixels in
  * the nearest palette colours, the dimmer parts thinned with an ordered dither (line_frame).
  *
  * The speedometer's picture (speedo.h's, premultiplied A8R8G8B8) into WA's 8-bit frame (speedo_frame), as wkMapZoom
@@ -19,7 +19,7 @@
  * worm's own turn (or right after it, before the next team's); spd: the worm's speed there (px/s, the game's) */
 typedef struct { float x, y; int32_t turn; int8_t brk, own; uint16_t spd; } tpoint;
 
-/* a vertex for wkDirect3D_Triangles: screen pixels; straight (not premultiplied) alpha */
+/* a vertex for wkDirect3D_Triangles (wkMapZoom 6's, or the older wkDirect3D's): screen pixels; straight (not premultiplied) alpha */
 typedef struct { float x, y; uint32_t argb; } wkd3d_vtx;
 
 /* where the map is on the screen: screen = org + (world - cam) * zoom; the screen is w x h */

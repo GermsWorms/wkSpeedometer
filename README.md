@@ -5,9 +5,9 @@ turn it is, and an optional movement line that shows where that worm has been. I
 [wkMapZoom](https://github.com/GermsWorms/wkMapZoom) (which had both up to 4.3), so you can have the speedometer
 without the zoom.
 
-> **Version 1.1 is a beta.** It has been tested on replays in a window on one PC, alone and together with wkDirect3D
-> and wkMapZoom 5. If something goes wrong, please [open an issue](https://github.com/GermsWorms/wkSpeedometer/issues)
-> with the log (see Notes).
+> **Version 1.2 is a beta.** It has been tested on replays in a window on one PC, alone and together with wkMapZoom 6.
+> If something goes wrong, please [open an issue](https://github.com/GermsWorms/wkSpeedometer/issues) with the log
+> (see Notes).
 
 <a href="screenshots/speedometer.png"><img src="screenshots/speedometer-dial.png" width="240" alt="The speedometer's dial at 1678 px/s: the ring lit from blue to red, the number in red, and the turn's average under it"></a>
 
@@ -43,14 +43,18 @@ Uninstall: delete `wkSpeedometer.dll`, or set `Enabled=0` in `wkSpeedometer.ini`
 
 ## Works with (all optional)
 
-- **[wkDirect3D](https://github.com/GermsWorms/wkDirect3D)** (0.4 or newer). When it is loaded, the dial and the line
-  are drawn by the graphics card over the finished picture: smooth and see-through, in true colour. Without it (or on a frame wkDirect3D doesn't draw) they go into WA's own
-  256-colour frame: the dial in the nearest colours of WA's palette, the line as solid pixels with the dimmer parts
-  thinned out by a dither pattern. Either way works with every one of WA's renderers.
-- **[wkMapZoom](https://github.com/GermsWorms/wkMapZoom)** (5 or newer). When it is loaded, the line and the dial
-  above the worm follow the zoomed map. Without it they assume WA's normal 100% view. Don't use it with wkMapZoom 4.3
-  or older: those have their own speedometer and movement line (you would see two of each) and don't tell their zoom.
-  Keep wkMapZoom's file name as it is: the module looks for `wkMapZoom.dll`.
+- **[wkMapZoom](https://github.com/GermsWorms/wkMapZoom)** (6 or newer). When it is loaded, two things change:
+  - The dial and the line are drawn by the graphics card over the finished picture: smooth and see-through, in true
+    colour. (wkMapZoom draws WA's picture on the graphics card and lets other modules draw over it. That needs WA's
+    Graphics API on Direct3D 9 (shader).)
+  - The line and the dial above the worm follow the zoomed map.
+
+  Without it (or on a frame the graphics card doesn't draw) they go into WA's own 256-colour frame, at WA's normal
+  100% view: the dial in the nearest colours of WA's palette, the line as solid pixels with the dimmer parts thinned
+  out by a dither pattern. That works with every one of WA's Graphics APIs.
+
+  Keep wkMapZoom's file name as it is: the module looks for `wkMapZoom.dll`. Don't use it with wkMapZoom 4.3 or
+  older: those have their own speedometer and movement line (you would see two of each) and don't tell their zoom.
 - **[wkModMenu](https://github.com/GermsWorms/wkModMenu).** With it the settings below can be changed in the game
   (Esc, Mods), and from 1.1 they apply at once.
 
@@ -77,8 +81,8 @@ Uninstall: delete `wkSpeedometer.dll`, or set `Enabled=0` in `wkSpeedometer.ini`
 - The movement line is per worm: each of a team's worms has its own, shown at that worm's turns. It is kept for the
   whole game and starts again with the next game.
 - In real-time play (wkRealTime), where several worms have the turn at once, there is no speedometer and no line.
-- WA's own screenshots show the dial and the line only when they went into WA's frame (without wkDirect3D). Laid over
-  the picture by wkDirect3D, they are on your screen but not in WA's screenshot.
+- WA's own screenshots show the dial and the line only when they went into WA's frame (without wkMapZoom). Laid over
+  the picture by the graphics card, they are on your screen but not in WA's screenshot.
 - Keep one copy of the module in the WA folder (a renamed second copy finds the first one and does nothing).
 - Once WA has loaded it, the module stays loaded until WA exits. A new `wkSpeedometer.dll` takes effect at WA's next
   start.
@@ -89,8 +93,8 @@ Uninstall: delete `wkSpeedometer.dll`, or set `Enabled=0` in `wkSpeedometer.ini`
 WA's team tasks are seen through their message handler, and the worms through their physics step: both hooks only
 look. Each frame the module notes which team has the turn, where its current worm is and how fast it goes, and every
 worm's place for the movement line (every 2 pixels it moves). Right after WA has drawn its frame's drawing queue (the
-map and the HUD), the line and the speedometer are drawn on top: through wkDirect3D when it is there and draws this
-frame, else into WA's 8-bit frame. Where the map is on the screen comes from wkMapZoom when it tells, else from WA's
+map and the HUD), the line and the speedometer are drawn on top: by the graphics card when wkMapZoom is there and
+draws this frame, else into WA's 8-bit frame. Where the map is on the screen comes from wkMapZoom when it tells, else from WA's
 camera.
 
 Hooks (WA 3.8.1, checked by the SHA-256 of `WA.exe`, or of its code section with its sections where 3.8.1 has them,
