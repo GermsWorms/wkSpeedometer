@@ -43,7 +43,7 @@
 #include "speedo.h"
 #include "overlay_draw.h"
 
-#define WKSPEEDO_VERSION "1.0 beta"
+#define WKSPEEDO_VERSION "1.1 beta"
 
 #define WA_BASE 0x400000u
 #define GAME_RENDER_VA 0x533dc0u
@@ -828,6 +828,32 @@ static void read_settings(const char *exe) {
         trail_colour = lstrcmpiA(v, "red") && strcmp(v, "0");
 }
 
+/* ---- for wkModMenu (github.com/GermsWorms/wkModMenu): what the settings are, and that one was changed in the game ------ */
+static char exe_path[MAX_PATH];
+__declspec(dllexport) const char *__cdecl wkModSettings(void) {
+    return "wkModSettings 1\n"
+           "title=wkSpeedometer\n"
+           "file=wkSpeedometer.ini\n"
+           "section=wkSpeedometer\n"
+           "live=1\n"
+           "Speedometer|Speedometer|choice|dial,number,off|dial|The speed of the worm whose turn it is, in pixels a second: a digital dial, the number alone, or nothing.\n"
+           "SpeedometerPlace|Speedometer: place|choice|corner,worm|corner|corner: bottom right, above WA's wind bar. worm: just above the worm's name.\n"
+           "RedFrom|Red from|int|400:1600:100|800|The speed, in pixels a second, where the colours reach red (blue when slow, through cyan, green, yellow and orange).\n"
+           "TurnLine|Movement line|choice|off,last,all|off|When a worm's turn starts, a line shows where that worm has been: its last turn only, the whole game, or no line.\n"
+           "TurnLineKeep|Movement line: stays all turn|bool||0|Off: the line goes as soon as the worm moves. On: it stays all turn.\n"
+           "TurnLineColour|Movement line: colour|choice|speed,red|speed|speed: coloured by how fast the worm went there. red: all red.\n";
+}
+__declspec(dllexport) void __cdecl wkModSettingsChanged(void) {
+    const int was = enabled;
+    if (!exe_path[0]) return;
+    read_settings(exe_path);
+    enabled = was;                          /* (Enabled is read at WA's start only) */
+    if (!trail_on) { trail_visible = 0; trail_show = -1; }
+    say("settings read again (changed in the Mods menu): speedometer %s (%s), red from %.0f px/s, movement line %s%s",
+        speedo == 1 ? "dial" : speedo == 2 ? "number" : "off", speedo_place ? "above the worm" : "bottom right corner", red_from,
+        !trail_on ? "off" : trail_all ? "whole game" : "last turn", trail_on && trail_keep ? ", stays" : "");
+}
+
 static int runs_without_screen(void) {
     const char *line = GetCommandLineA();
     static const char *const switches[] = {"/getvideo", "/getlog", "/getmap", "/getscheme", "/sanitise", "/sanitize", "/repair"};
@@ -879,6 +905,7 @@ static void install(void) {
     }
     if (runs_without_screen()) { say("a /get... or repair run: not installed"); return; }
     base = (uintptr_t)GetModuleHandleA(NULL);
+    if (strlen(exe) < sizeof(exe_path)) strcpy(exe_path, exe);
     read_settings(exe);
     if (!enabled) { say("Enabled=0 in wkSpeedometer.ini: not installed"); return; }
     {   /* one copy a process (renamed copies too): the first one loaded wins */

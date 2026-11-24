@@ -5,7 +5,7 @@ turn it is, and an optional movement line that shows where that worm has been. I
 [wkMapZoom](https://github.com/GermsWorms/wkMapZoom) (which had both up to 4.3), so you can have the speedometer
 without the zoom.
 
-> **Version 1.0 is a beta.** It has been tested on replays in a window on one PC, alone and together with wkDirect3D
+> **Version 1.1 is a beta.** It has been tested on replays in a window on one PC, alone and together with wkDirect3D
 > and wkMapZoom 5. If something goes wrong, please [open an issue](https://github.com/GermsWorms/wkSpeedometer/issues)
 > with the log (see Notes).
 
@@ -41,7 +41,7 @@ Both are drawn over the HUD, and never while WA's Esc menu is open.
 
 Uninstall: delete `wkSpeedometer.dll`, or set `Enabled=0` in `wkSpeedometer.ini`.
 
-## Works with (both optional)
+## Works with (all optional)
 
 - **[wkDirect3D](https://github.com/GermsWorms/wkDirect3D)** (0.4 or newer). When it is loaded, the dial and the line
   are drawn by the graphics card over the finished picture: smooth and see-through, in true colour. Without it (or on a frame wkDirect3D doesn't draw) they go into WA's own
@@ -51,6 +51,8 @@ Uninstall: delete `wkSpeedometer.dll`, or set `Enabled=0` in `wkSpeedometer.ini`
   above the worm follow the zoomed map. Without it they assume WA's normal 100% view. Don't use it with wkMapZoom 4.3
   or older: those have their own speedometer and movement line (you would see two of each) and don't tell their zoom.
   Keep wkMapZoom's file name as it is: the module looks for `wkMapZoom.dll`.
+- **[wkModMenu](https://github.com/GermsWorms/wkModMenu).** With it the settings below can be changed in the game
+  (Esc, Mods), and from 1.1 they apply at once.
 
 ## Settings (`wkSpeedometer.ini`, all optional)
 
